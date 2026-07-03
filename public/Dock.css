@@ -1,0 +1,50 @@
+/* Enhanced CSS for 60 FPS mobile performance optimization */
+
+/* Force GPU acceleration on container */
+.dock-shell{position:fixed;left:50%;bottom:calc(var(--npH) + 16px);transform:translateX(-50%);width:min(100%,980px);display:flex;justify-content:center;pointer-events:none;z-index:30;padding:0 14px;will-change:transform;transform:translate3d(-50%,0,0)}
+
+.dock-outer{pointer-events:auto;display:flex;max-width:100%;align-items:center;justify-content:center;will-change:height;backface-visibility:hidden;perspective:1000px;contain:layout style paint}
+
+.dock-panel{position:relative;display:flex;align-items:flex-end;width:fit-content;gap:1rem;border-radius:22px;background:linear-gradient(180deg,rgba(18,18,18,.95),rgba(12,12,12,.92));border:1px solid rgba(29,185,84,.14);padding:0.8rem 1rem 1rem;backdrop-filter:blur(24px);box-shadow:0 18px 44px rgba(0,0,0,.34);transform:translate3d(0,0,0);will-change:transform;contain:layout style}
+
+/* Enhanced mobile-specific optimizations */
+.dock-panel.mobile{gap:0.75rem;padding:0.6rem 0.8rem 0.8rem;backdrop-filter:blur(20px);border-radius:20px;transform:translate3d(0,0,0)}
+.dock-panel.desktop{gap:1rem;padding:0.8rem 1rem 1rem}
+
+.dock-item{position:relative;display:inline-flex;align-items:center;justify-content:center;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 26px rgba(0,0,0,.2);cursor:pointer;outline:none;width:52px;height:52px;
+  /* 60 FPS optimization properties */
+  will-change:transform,filter,box-shadow;
+  backface-visibility:hidden;
+  transform:translate3d(0,0,0);
+  contain:layout style paint;
+  /* Hardware-accelerated transitions */
+  transition:border-color var(--anim-fast) var(--ease-out),background var(--anim-fast) var(--ease-out)}
+
+/* Enhanced hover states with improved easing */
+.dock-item:hover{border-color:rgba(29,185,84,.32);background:linear-gradient(180deg,rgba(29,185,84,.16),rgba(29,185,84,.08))}
+
+/* Mobile-specific touch states with performance optimization */
+.dock-item.pressed{transform:scale3d(0.90,0.90,1) translate3d(0,0,0)}
+.dock-item.active{border-color:rgba(29,185,84,.45);background:linear-gradient(180deg,rgba(29,185,84,.2),rgba(29,185,84,.1))}
+
+/* Focus states for accessibility */
+.dock-item:focus-visible{outline:2px solid rgba(29,185,84,.45);outline-offset:2px}
+
+/* Performance optimization for touch devices */
+@media (pointer: coarse) {
+  .dock-item{touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  .dock-panel{gap:0.75rem;padding:0.6rem 0.8rem 0.8rem}
+}
+
+/* Reduce motion for accessibility while maintaining performance */
+@media (prefers-reduced-motion: reduce) {
+  .dock-item{transition:border-color 0.1s ease,background 0.1s ease}
+  .dock-outer{will-change:auto}
+  .dock-panel{will-change:auto}
+}
+
+.dock-icon{display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.15rem;will-change:color;backface-visibility:hidden;transform:translate3d(0,0,0);transition:color var(--anim-fast) var(--ease-out)}
+.dock-item:hover .dock-icon{color:var(--primary)}
+
+.dock-label{position:absolute;top:-1.35rem;left:50%;transform:translate3d(-50%,0,0);white-space:nowrap;border-radius:999px;background:rgba(18,18,18,.96);padding:0.4rem 0.8rem;font-size:0.72rem;color:#fff;border:1px solid rgba(255,255,255,.1);box-shadow:0 8px 24px rgba(0,0,0,.28);font-weight:600;opacity:0;pointer-events:none;transition:opacity var(--anim-fast) var(--ease-out);letter-spacing:0.2px;will-change:opacity;backface-visibility:hidden;contain:layout style}
+.dock-item:hover .dock-label{opacity:1}

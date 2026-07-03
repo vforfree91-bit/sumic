@@ -1,0 +1,30 @@
+{
+  "name": "sumic",
+  "version": "1.0.0",
+  "description": "Sumic — a premium, distraction-free music streaming experience.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "music",
+    "streaming",
+    "player",
+    "sumic",
+    "youtube",
+    "spotify-import"
+  ],
+  "author": "saurabh222007",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saurabh222007/sumic.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

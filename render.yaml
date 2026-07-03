@@ -1,0 +1,17 @@
+# Render Blueprint – Sumic Backend
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: sumic-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+    healthCheckPath: /api/search?q=test
+    autoDeploy: true
