@@ -73,22 +73,4 @@ if (container) {
   
   root.render(h(Dock, config));
   
-  // Performance monitoring for 60 FPS optimization
-  if (process.env.NODE_ENV === 'development') {
-    let frameCount = 0;
-    let lastTime = performance.now();
-    
-    function measureFPS() {
-      frameCount++;
-      const currentTime = performance.now();
-      if (currentTime - lastTime >= 1000) {
-        console.log(`Dock FPS: ${frameCount} fps`);
-        frameCount = 0;
-        lastTime = currentTime;
-      }
-      requestAnimationFrame(measureFPS);
-    }
-    
-    requestAnimationFrame(measureFPS);
-  }
 }

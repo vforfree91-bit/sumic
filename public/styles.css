@@ -1380,7 +1380,7 @@ body.light .content, body.light .main-shell{background:transparent}
 
 /* ── Legacy breakpoints consolidated to standard system (768px tablet, 460px mobile) ── */
 @media(max-width:768px){#app{grid-template-columns:1fr}.topbar{height:auto;border-right:none;border-bottom:1px solid var(--gb)}.npbar{left:50%;width:calc(100% - 40px)}.main-shell{height:auto;min-height:100dvh}.content{padding-bottom:120px}.artist-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:460px){.card-grid{grid-template-columns:1fr}.hero-banner{padding:18px}.hero-search{flex-wrap:wrap}.hero-go{width:100%}.shell-header{padding:16px 16px 8px}.content{padding:8px 16px 120px}.artist-row{grid-template-columns:1fr}}
+@media(max-width:460px){.card-grid{grid-template-columns:repeat(2, 1fr)}.hero-banner{padding:18px}.hero-search{flex-wrap:wrap}.hero-go{width:100%}.shell-header{padding:16px 16px 8px}.content{padding:8px 16px 120px}.artist-row{grid-template-columns:repeat(2, 1fr)}}
 
 .page-header{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
 .page-header h2{font-size:1.3rem;font-weight:800}
@@ -2187,7 +2187,7 @@ body.light .content, body.light .main-shell{background:transparent}
     box-sizing: border-box;
   }
   
-  .fp-bottom-bar, .npbar {
+  .fp-bottom-bar {
     width: calc(100% - 40px);
     height: 140px;
     flex-wrap: wrap;
@@ -2239,7 +2239,7 @@ body.light .content, body.light .main-shell{background:transparent}
     font-size: 1.35rem;
   }
 
-  .fp-bottom-bar, .npbar {
+  .fp-bottom-bar {
     height: 170px;
     justify-content: center;
     gap: 10px;
@@ -2489,11 +2489,15 @@ body {
     font-size: var(--text-lg);
   }
 
-  /* All grids collapse to 1 column */
+  /* All grids collapse to 2 columns for a premium mobile layout */
   .card-grid,
   .trend-grid,
   .artist-row,
-  .dash-grid,
+  .dash-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
   .two-col {
     grid-template-columns: 1fr;
   }
@@ -2856,4 +2860,162 @@ input:focus-visible {
   transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
               transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
+}
+
+/* ── MOBILE / TABLET DOCK AND MINI-PLAYER OVERRIDES ── */
+@media (max-width: 768px) {
+  /* Hide the desktop sidebar completely on mobile/tablet */
+  .topbar.sidebar {
+    display: none !important;
+  }
+
+  /* Make sure the main layout is a single column */
+  #app {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Position the mobile Dock at the very bottom */
+  .dock-shell {
+    display: flex !important;
+    bottom: 12px !important;
+  }
+
+  /* Ensure the content scroll area has enough bottom padding to prevent items from being hidden behind player/dock */
+  .content {
+    padding-bottom: 180px !important;
+  }
+
+  /* Separate the floating mini-player .npbar from the fullscreen player bar styles */
+  .npbar {
+    position: fixed !important;
+    bottom: 84px !important; /* Float beautifully directly above the dock */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: calc(100% - 24px) !important;
+    max-width: 480px !important;
+    height: 64px !important;
+    border-radius: 16px !important;
+    padding: 0 16px !important;
+    background: rgba(18, 20, 26, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    z-index: 99 !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+  }
+
+  /* Transition for slide down/up when hidden/shown */
+  .npbar.hide {
+    transform: translate(-50%, 200%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Left Side: Track art + info */
+  .npbar .fp-bar-track {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    max-width: unset !important;
+    justify-content: flex-start !important;
+    width: auto !important;
+  }
+
+  .npbar .fp-bar-thumb {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: var(--r-sm) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .npbar .fp-bar-info {
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
+
+  .npbar .fp-bar-title {
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    color: #fff !important;
+    text-align: left !important;
+  }
+
+  .npbar .fp-bar-artist {
+    font-size: 0.72rem !important;
+    color: var(--t3) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    text-align: left !important;
+  }
+
+  /* Center: Play/Pause button only (prev/next hidden) */
+  .npbar .fp-bar-controls {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    width: auto !important;
+    order: unset !important;
+    flex: none !important;
+  }
+
+  .npbar .fp-bar-controls .fp-bar-btn {
+    display: none !important; /* Hide prev/next */
+  }
+
+  .npbar .fp-bar-play {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
+  }
+
+  /* Hide progress bar and timer in mini player to avoid clutter */
+  .npbar .fp-bar-progress,
+  .npbar .fp-bar-time {
+    display: none !important;
+  }
+
+  /* Right Side: Utilities (Only show the expand chevron) */
+  .npbar .fp-bar-utils {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 0 !important;
+    min-width: unset !important;
+    width: auto !important;
+    order: unset !important;
+    flex: none !important;
+  }
+
+  .npbar .fp-bar-utils .fp-util-btn:not(#expandBtn),
+  .npbar .fp-bar-utils .fp-bar-vol-wrap {
+    display: none !important;
+  }
+
+  .npbar #expandBtn {
+    display: flex !important;
+    width: 36px !important;
+    height: 36px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-size: 0.95rem !important;
+  }
+}
+
+/* ── Hide mobile Dock on Desktop ── */
+@media (min-width: 769px) {
+  .dock-shell {
+    display: none !important;
+  }
 }
