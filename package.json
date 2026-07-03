@@ -19,7 +19,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/saurabh222007/sumic.git"
+    "url": "https://github.com/saurabh222007/sumic-plays.git"
   },
   "engines": {
     "node": ">=18.0.0"

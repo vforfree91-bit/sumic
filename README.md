@@ -74,8 +74,8 @@ Most music players are bloated with ads, trackers, and things you never asked fo
 
 ```bash
 # Clone the repository
-git clone https://github.com/saurabh222007/sumic.git
-cd sumic
+git clone https://github.com/saurabh222007/sumic-plays.git
+cd sumic-plays
 
 # Install dependencies
 npm install
@@ -100,7 +100,7 @@ Sumic is designed for a **split deployment**:
 ### 1. Deploy Backend on Render
 
 1. Go to [render.com](https://render.com) → **New → Web Service**
-2. Connect your GitHub repo (`saurabh222007/sumic`)
+2. Connect your GitHub repo (`saurabh222007/sumic-plays`)
 3. Render will auto-detect the `render.yaml` blueprint, or configure manually:
 
 | Setting | Value |
@@ -114,7 +114,7 @@ Sumic is designed for a **split deployment**:
 ### 2. Deploy Frontend on Cloudflare Pages
 
 1. Go to [Cloudflare Pages](https://pages.cloudflare.com/) → **Create a project**
-2. Connect your GitHub repo (`saurabh222007/sumic`)
+2. Connect your GitHub repo (`saurabh222007/sumic-plays`)
 3. Configure the build:
 
 | Setting | Value |
@@ -132,24 +132,24 @@ Sumic is designed for a **split deployment**:
 
 After both are deployed, update the API base URL in `public/app.js`:
 
-Find all `fetch('/api/...)` calls and prepend your Render backend URL:
-
+1. Open `public/app.js` and locate the `API_BASE` configuration at the top of the file:
 ```js
-// Before (works for local dev and single-server deploy)
-fetch('/api/search?q=...')
-
-// After (for split deploy)
-fetch('https://YOUR-RENDER-APP.onrender.com/api/search?q=...')
+// API BASE CONFIGURATION (Set this to your Render backend URL when deploying to Cloudflare Pages)
+const API_BASE = '';
+```
+2. Update it to your deployed Render URL:
+```js
+const API_BASE = 'https://your-render-backend-url.onrender.com';
 ```
 
-> **Tip:** Or create a small environment config at the top of `app.js` to toggle between local and production URLs.
+> **Note:** By default, when `API_BASE` is left blank, it automatically defaults to relative routes which work perfectly for local development or when hosting the frontend and backend on the same server.
 
 ---
 
 ## Project Structure
 
 ```
-sumic/
+sumic-plays/
 ├── public/           # Frontend (static files)
 │   ├── index.html    # Main app shell
 │   ├── login.html    # Authentication page
