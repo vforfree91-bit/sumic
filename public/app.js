@@ -6,6 +6,10 @@
 (function () {
   'use strict';
 
+  // API BASE CONFIGURATION (Set this to your Render backend URL when deploying to Cloudflare Pages)
+  const API_BASE = '';
+
+
   // Default playlists
   const defaultPlaylists = [
     {
@@ -384,7 +388,7 @@
     if (!title) return;
 
     try {
-      const res = await fetch(`/api/lyrics?track=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`);
+      const res = await fetch(`${API_BASE}/api/lyrics?track=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`);
       if (!res.ok) throw new Error('No lyrics');
       const data = await res.json();
       if (requestId !== lyricsRequestId) return;
@@ -500,7 +504,7 @@
     const anchor = (track.author && track.author !== 'Unknown') ? track.author : track.title;
     if (!anchor || anchor === st.recAnchor) return;
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(anchor)}`);
+      const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(anchor)}`);
       if (res.ok) {
         const data = await res.json();
         if (data && Array.isArray(data.results)) {
@@ -554,7 +558,7 @@
     async playQuery(query) {
       toast(`Loading ${query}…`, 'info');
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`);
         if (res.ok) {
           const data = await res.json();
           if (data && Array.isArray(data.results) && data.results.length > 0) {
@@ -607,7 +611,7 @@
       }
 
       try {
-        const res = await fetch('/api/import-playlist', {
+        const res = await fetch(`${API_BASE}/api/import-playlist`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: link }),
@@ -778,7 +782,7 @@
       loading(true);
       try {
         announce(`Searching for ${q}`);
-        const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const r = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(q)}`);
         const d = await r.json();
         loading(false);
         if (d.error || !d.results?.length) { renderResults([], q); toast(d.error || `No results for "${q}"`, 'err'); announce(`No results for ${q}`); return; }
