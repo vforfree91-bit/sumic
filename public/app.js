@@ -221,6 +221,31 @@
   }
 
   let wasPlayingBeforeMinimize = false;
+  let silentAudio = null;
+
+  function playSilentAudio() {
+    try {
+      if (!silentAudio) {
+        silentAudio = document.createElement('audio');
+        silentAudio.id = 'silentAudio';
+        silentAudio.loop = true;
+        silentAudio.volume = 0.01;
+        silentAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
+        document.body.appendChild(silentAudio);
+      }
+      silentAudio.play().catch(e => console.warn('Silent audio play failed:', e));
+    } catch (e) {
+      console.warn('Silent audio helper failed:', e);
+    }
+  }
+
+  function pauseSilentAudio() {
+    if (silentAudio) {
+      try {
+        silentAudio.pause();
+      } catch (e) {}
+    }
+  }
 
   function loadYT() {
     if (window.YT && window.YT.Player) {
@@ -301,6 +326,7 @@
       spin(true);
       userInitiatedPause = false;
       wasPlayingBeforeMinimize = false;
+      playSilentAudio();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     }
     if (e.data === P.PAUSED)   {
@@ -312,19 +338,20 @@
       
       // Auto-resume if the pause was not initiated by the user (e.g., app minimized or tab hidden)
       if (!userInitiatedPause) {
-        if (!document.hidden) {
-          setTimeout(() => {
-            if (yt && ytOk && !userInitiatedPause && !document.hidden) {
-              try {
-                yt.playVideo();
-              } catch (err) {
-                console.warn('Auto-resume failed:', err);
-              }
+        // Keep silent audio playing so background playback/timers stay active
+        playSilentAudio();
+        
+        setTimeout(() => {
+          if (yt && ytOk && !userInitiatedPause) {
+            try {
+              yt.playVideo();
+            } catch (err) {
+              console.warn('Auto-resume failed:', err);
             }
-          }, 150);
-        } else {
-          wasPlayingBeforeMinimize = true;
-        }
+          }
+        }, 200);
+      } else {
+        pauseSilentAudio();
       }
     }
     if (e.data === P.ENDED)    { onEnd(); }
@@ -555,6 +582,7 @@
     loadLyrics(st.track);
     fetchRecommendations(st.track);
     updateMediaSession(st.track);
+    playSilentAudio();
     try {
       yt.loadVideoById({ videoId: st.track.id, startSeconds: 0, suggestedQuality: 'small' });
       yt.setVolume(st.vol * 100);
@@ -895,7 +923,13 @@
       try {
         const isPlaying = yt.getPlayerState() === YT.PlayerState.PLAYING;
         userInitiatedPause = isPlaying;
-        isPlaying ? yt.pauseVideo() : yt.playVideo();
+        if (isPlaying) {
+          yt.pauseVideo();
+          pauseSilentAudio();
+        } else {
+          playSilentAudio();
+          yt.playVideo();
+        }
       } catch(e){}
     },
 
@@ -1964,19 +1998,38 @@
       return;
     }
 
+    // Unlock Web Audio / Background Audio on first touch/click
+    const unlockAudio = () => {
+      playSilentAudio();
+      if (!st.playing) {
+        pauseSilentAudio();
+      }
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
     // Auto-resume playback when app returns to foreground
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && wasPlayingBeforeMinimize) {
-        wasPlayingBeforeMinimize = false;
-        setTimeout(() => {
-          if (yt && ytOk && !st.playing) {
-            try {
-              yt.playVideo();
-            } catch (err) {
-              console.warn('Auto-resume on visibilitychange failed:', err);
+      if (document.hidden) {
+        if (st.playing) {
+          wasPlayingBeforeMinimize = true;
+          playSilentAudio();
+        }
+      } else {
+        pauseSilentAudio();
+        if (wasPlayingBeforeMinimize) {
+          wasPlayingBeforeMinimize = false;
+          setTimeout(() => {
+            if (yt && ytOk && !st.playing) {
+              try {
+                yt.playVideo();
+              } catch (err) {
+                console.warn('Auto-resume on visibilitychange failed:', err);
+              }
             }
-          }
-        }, 100);
+          }, 100);
+        }
       }
     });
 
