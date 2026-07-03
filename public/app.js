@@ -299,6 +299,7 @@
       title: track.title || 'Unknown',
       author: track.author || track.artist || '',
       thumbnail: track.thumbnail || '',
+      duration: track.duration || null
     };
   }
 
@@ -314,6 +315,8 @@
     document.body.classList.toggle('light', st.theme === 'light');
     const btn = document.getElementById('themeToggle');
     if (btn) btn.innerHTML = `<i class="fas fa-${st.theme === 'light' ? 'sun' : 'moon'}"></i>`;
+    const sideBtn = document.getElementById('sidebarThemeToggle');
+    if (sideBtn) sideBtn.innerHTML = `<i class="fas fa-${st.theme === 'light' ? 'sun' : 'moon'}"></i><span>Theme Toggle</span>`;
   }
 
   function scrollActiveLyricToCenter() {
@@ -448,10 +451,16 @@
   function updateAccountUI() {
     const badge = document.getElementById('avatarBadge');
     const label = document.getElementById('accountLabel');
+    const sBadge = document.getElementById('sidebarAvatarBadge');
+    const sLabel = document.getElementById('sidebarAccountLabel');
     const authShell = document.getElementById('authShell');
     const app = document.getElementById('app');
-    if (badge) badge.textContent = (st.user?.name || 'U').trim().charAt(0).toUpperCase();
-    if (label) label.textContent = st.user?.name ? st.user.name : 'Account';
+    const initial = (st.user?.name || 'U').trim().charAt(0).toUpperCase();
+    const name = st.user?.name ? st.user.name : 'Account';
+    if (badge) badge.textContent = initial;
+    if (label) label.textContent = name;
+    if (sBadge) sBadge.textContent = initial;
+    if (sLabel) sLabel.textContent = name;
     if (authShell) authShell.classList.toggle('hidden', !!st.user);
     if (app) app.classList.toggle('ready', !!st.user);
   }
@@ -667,8 +676,8 @@
       announce(`Playing ${track.title}`);
     },
 
-    toggleLike(id, title, author, thumbnail) {
-      const track = { id, title, author, thumbnail };
+    toggleLike(id, title, author, thumbnail, duration = null) {
+      const track = { id, title, author, thumbnail, duration };
       const existing = st.liked.findIndex(item => item.id === id);
       if (existing >= 0) st.liked.splice(existing, 1);
       else st.liked.unshift(track);
@@ -678,8 +687,8 @@
       toast(existing >= 0 ? 'Removed from liked songs' : 'Added to liked songs', 'ok');
     },
 
-    playTrack(id, title, author, thumbnail, queue = []) {
-      const track = { id, title, author, thumbnail };
+    playTrack(id, title, author, thumbnail, queue = [], duration = null) {
+      const track = { id, title, author, thumbnail, duration };
       play(track, queue);
       announce(`Playing ${title}`);
     },
@@ -698,8 +707,8 @@
       }
     },
 
-    addToQueue(id, title, author, thumbnail) {
-      const track = { id, title, author, thumbnail };
+    addToQueue(id, title, author, thumbnail, duration = null) {
+      const track = { id, title, author, thumbnail, duration };
       st.queue.push(track);
       persistTrackAndQueue();
       updQueue(); updQBadge(); updFPQueue(); renderPlaylistDrawer();
@@ -1177,10 +1186,11 @@
         id: item.id || item.videoId,
         title: item.title,
         author: item.author || item.artist,
-        thumbnail: item.thumbnail
+        thumbnail: item.thumbnail,
+        duration: item.duration
       }));
       
-      play({ id: track.id || track.videoId, title: track.title, author: track.author || track.artist, thumbnail: track.thumbnail }, rest);
+      play({ id: track.id || track.videoId, title: track.title, author: track.author || track.artist, thumbnail: track.thumbnail, duration: track.duration }, rest);
       announce(`Playing playlist ${playlist.title}`);
     },
 
@@ -1196,7 +1206,25 @@
     tickStop();
     st.timer = setInterval(() => {
       if (!yt || !yt.getDuration) return;
-      const cur = yt.getCurrentTime() || 0, dur = yt.getDuration() || 0;
+      let cur = 0;
+      try { cur = yt.getCurrentTime() || 0; } catch (e) {}
+      let dur = 0;
+      try { dur = yt.getDuration() || 0; } catch (e) {}
+
+      // Fallback to track duration if player returns 0
+      if (!dur && st.track && st.track.duration) {
+        if (typeof st.track.duration === 'number') {
+          dur = st.track.duration;
+        } else if (typeof st.track.duration === 'string') {
+          const parts = st.track.duration.split(':');
+          if (parts.length === 2) {
+            dur = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+          } else {
+            dur = parseInt(st.track.duration) || 0;
+          }
+        }
+      }
+
       const pct = dur ? (cur / dur) * 100 : 0;
       const nf = document.getElementById('npFill'), ff = document.getElementById('fpFill');
       syncLyrics(cur);
@@ -1269,11 +1297,16 @@
       }
     });
   }
-
   /* ── BAR / FULL PLAYER ── */
   function updBar(t) {
     document.getElementById('npTitle').textContent = t.title || 'Unknown';
     document.getElementById('npArt').textContent   = t.author || '--';
+    
+    // Update initial duration from track metadata immediately
+    const durationText = t.duration ? fmtDur(t.duration) : '0:00';
+    const nd = document.getElementById('npDur');
+    if (nd) nd.textContent = durationText;
+
     const th = document.getElementById('npThumb');
     if (!th) return;
 
@@ -1305,6 +1338,12 @@
   function updFull(t) {
     document.getElementById('fpTitle').textContent = t.title || 'Unknown';
     document.getElementById('fpArt').textContent   = t.author || '--';
+    
+    // Update initial duration from track metadata immediately
+    const durationText = t.duration ? fmtDur(t.duration) : '0:00';
+    const fd = document.getElementById('fpDur');
+    if (fd) fd.textContent = durationText;
+
     renderLyrics();
 
     // Update vinyl center art
@@ -1399,8 +1438,8 @@
             </div>
             <div class="res-actions">
               <button class="res-play" onclick="event.stopPropagation();S.playAt(${i})"><i class="fas fa-play"></i></button>
-              <button class="res-queue" onclick="event.stopPropagation();S.addToQueue('${r.id}','${quoteJs(r.title)}','${quoteJs(r.author||'')}','${quoteJs(r.thumbnail||'')}')"><i class="fas fa-plus"></i></button>
-              <button class="res-like ${isLiked(r.id) ? 'active' : ''}" onclick="event.stopPropagation();S.toggleLike('${r.id}','${quoteJs(r.title)}','${quoteJs(r.author||'')}','${quoteJs(r.thumbnail||'')}')"><i class="fas fa-heart"></i></button>
+              <button class="res-queue" onclick="event.stopPropagation();S.addToQueue('${r.id}','${quoteJs(r.title)}','${quoteJs(r.author||'')}','${quoteJs(r.thumbnail||'')}','${r.duration || ''}')"><i class="fas fa-plus"></i></button>
+              <button class="res-like ${isLiked(r.id) ? 'active' : ''}" onclick="event.stopPropagation();S.toggleLike('${r.id}','${quoteJs(r.title)}','${quoteJs(r.author||'')}','${quoteJs(r.thumbnail||'')}','${r.duration || ''}')"><i class="fas fa-heart"></i></button>
             </div>
           </div>`).join('')}
       </div>`;
@@ -1464,7 +1503,7 @@
             </div>
             <div class="res-actions">
               <button class="res-play" type="button" onclick="event.stopPropagation();S.playLiked(${index})"><i class="fas fa-play"></i></button>
-              <button class="res-queue" type="button" onclick="event.stopPropagation();S.addToQueue('${track.id}','${quoteJs(track.title)}','${quoteJs(track.author||'')}','${quoteJs(track.thumbnail||'')}')"><i class="fas fa-plus"></i></button>
+              <button class="res-queue" type="button" onclick="event.stopPropagation();S.addToQueue('${track.id}','${quoteJs(track.title)}','${quoteJs(track.author||'')}','${quoteJs(track.thumbnail||'')}','${track.duration || ''}')"><i class="fas fa-plus"></i></button>
               <button class="res-like active" type="button" onclick="event.stopPropagation();S.removeLiked(${index})"><i class="fas fa-heart"></i></button>
             </div>
           </div>`).join('')}
@@ -1857,7 +1896,8 @@
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
     if (mobileMenuBtn) {
-      mobileMenuBtn.addEventListener('click', () => {
+      mobileMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const sidebar = document.getElementById('sidebar');
         const backdrop = document.getElementById('sidebarBackdrop');
         if (sidebar) sidebar.classList.toggle('open');
@@ -1880,6 +1920,19 @@
         if (sidebar) sidebar.classList.remove('open');
         if (backdrop) backdrop.classList.remove('active');
       });
+    });
+
+    // Global click listener to close sidebar on click outside
+    document.addEventListener('click', (e) => {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      const mobileBtn = document.getElementById('mobileMenuBtn');
+      if (sidebar && sidebar.classList.contains('open')) {
+        if (!sidebar.contains(e.target) && (!mobileBtn || !mobileBtn.contains(e.target))) {
+          sidebar.classList.remove('open');
+          if (backdrop) backdrop.classList.remove('active');
+        }
+      }
     });
 
     particles();

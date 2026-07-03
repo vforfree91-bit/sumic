@@ -39,6 +39,17 @@
         <button class="tab-btn" data-tab="imported" aria-label="Import Spotify playlist" onclick="S.tab('imported')"><i class="fas fa-file-import"></i><span>Import</span></button>
         <button class="tab-btn" data-tab="liked" aria-label="Go to Liked" onclick="S.tab('liked')"><i class="fas fa-heart"></i><span>Liked</span></button>
       </nav>
+      
+      <div class="sidebar-footer">
+        <div class="sidebar-divider"></div>
+        <button class="tab-btn" id="sidebarThemeToggle" aria-label="Toggle theme" onclick="S.toggleTheme()">
+          <i class="fas fa-moon"></i><span>Theme Toggle</span>
+        </button>
+        <button class="tab-btn account" id="sidebarAccountBtn" aria-label="Open account menu" onclick="S.openAccount()">
+          <span class="avatar" id="sidebarAvatarBadge">U</span>
+          <span id="sidebarAccountLabel">Account</span>
+        </button>
+      </div>
     </aside>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
