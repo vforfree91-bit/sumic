@@ -6,6 +6,35 @@
 (function () {
   'use strict';
 
+  // Spoof Page Visibility API to allow background playback on mobile devices
+  try {
+    Object.defineProperty(document, 'visibilityState', {
+      get: () => 'visible',
+      configurable: true
+    });
+    Object.defineProperty(document, 'hidden', {
+      get: () => false,
+      configurable: true
+    });
+    const preventVisibility = (e) => {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    };
+    document.addEventListener('visibilitychange', preventVisibility, true);
+    document.addEventListener('webkitvisibilitychange', preventVisibility, true);
+    window.addEventListener('visibilitychange', preventVisibility, true);
+
+    const originalAddEventListener = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function(type, listener, options) {
+      if (type === 'visibilitychange' || type === 'webkitvisibilitychange') {
+        if (this === document || this === window) return;
+      }
+      return originalAddEventListener.apply(this, arguments);
+    };
+  } catch (e) {
+    console.warn('Visibility override failed:', e);
+  }
+
   // API BASE CONFIGURATION (Set this to your Render backend URL when deploying to Cloudflare Pages)
   const API_BASE = 'https://sumic-api.onrender.com';
 
@@ -192,6 +221,34 @@
   /* ── YT PLAYER ── */
   let yt = null, ytOk = false, pendingPlayback = null;
   let lyricsRequestId = 0;
+  let userInitiatedPause = false;
+
+  function updateMediaSession(track) {
+    if ('mediaSession' in navigator && track) {
+      try {
+        const metadata = {
+          title: track.title || 'Unknown Title',
+          artist: track.author || 'Unknown Artist',
+          album: 'Sumic',
+        };
+        if (track.thumbnail || track.id) {
+          const artUrl = track.thumbnail || `https://img.youtube.com/vi/${track.id}/mqdefault.jpg`;
+          metadata.artwork = [
+            { src: artUrl, sizes: '96x96', type: 'image/jpeg' },
+            { src: artUrl, sizes: '128x128', type: 'image/jpeg' },
+            { src: artUrl, sizes: '192x192', type: 'image/jpeg' },
+            { src: artUrl, sizes: '256x256', type: 'image/jpeg' },
+            { src: artUrl, sizes: '384x384', type: 'image/jpeg' },
+            { src: artUrl, sizes: '512x512', type: 'image/jpeg' }
+          ];
+        }
+        navigator.mediaSession.metadata = new MediaMetadata(metadata);
+        navigator.mediaSession.playbackState = 'playing';
+      } catch (e) {
+        console.warn('MediaSession metadata update failed:', e);
+      }
+    }
+  }
 
   function loadYT() {
     if (window.YT && window.YT.Player) {
@@ -265,10 +322,37 @@
 
   function onState(e) {
     const P = YT.PlayerState;
-    if (e.data === P.PLAYING)  { st.playing = true;  setIcons(true);  tickStart(); spin(true); }
-    if (e.data === P.PAUSED)   { st.playing = false; setIcons(false); tickStop();  spin(false); }
+    if (e.data === P.PLAYING)  {
+      st.playing = true;
+      setIcons(true);
+      tickStart();
+      spin(true);
+      userInitiatedPause = false;
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    }
+    if (e.data === P.PAUSED)   {
+      st.playing = false;
+      setIcons(false);
+      tickStop();
+      spin(false);
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      
+      // Auto-resume if the pause was not initiated by the user (e.g., app minimized or tab hidden)
+      if (!userInitiatedPause) {
+        setTimeout(() => {
+          if (yt && ytOk && !userInitiatedPause) {
+            try {
+              yt.playVideo();
+            } catch (err) {
+              console.warn('Auto-resume failed:', err);
+            }
+          }
+        }, 150);
+      }
+    }
     if (e.data === P.ENDED)    { onEnd(); }
   }
+
   function onErr(e) {
     const m = { 2:'Invalid ID', 5:'HTML5 error', 100:'Not found', 101:'Embed blocked', 150:'Embed blocked' };
     if (e.data === 100 || e.data === 101 || e.data === 150) {
@@ -493,6 +577,7 @@
     updBar(st.track); updFull(st.track); updQueue(); updFPQueue(); markNow(st.track.id);
     loadLyrics(st.track);
     fetchRecommendations(st.track);
+    updateMediaSession(st.track);
     try {
       yt.loadVideoById({ videoId: st.track.id, startSeconds: 0, suggestedQuality: 'small' });
       yt.setVolume(st.vol * 100);
@@ -830,7 +915,11 @@
 
     pp() {
       if (!yt || !ytOk) return;
-      try { yt.getPlayerState() === YT.PlayerState.PLAYING ? yt.pauseVideo() : yt.playVideo(); } catch(e){}
+      try {
+        const isPlaying = yt.getPlayerState() === YT.PlayerState.PLAYING;
+        userInitiatedPause = isPlaying;
+        isPlaying ? yt.pauseVideo() : yt.playVideo();
+      } catch(e){}
     },
 
     prev() {
@@ -1886,6 +1975,23 @@
     if (!st.user) {
       window.location.href = 'login.html';
       return;
+    }
+
+    // Set up Media Session actions
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.setActionHandler('play', () => S.pp());
+        navigator.mediaSession.setActionHandler('pause', () => S.pp());
+        navigator.mediaSession.setActionHandler('previoustrack', () => S.prev());
+        navigator.mediaSession.setActionHandler('nexttrack', () => S.next());
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+          if (yt && ytOk && details.seekTime) {
+            yt.seekTo(details.seekTime, true);
+          }
+        });
+      } catch (e) {
+        console.warn('Failed to register Media Session handlers:', e);
+      }
     }
     if (accountBtn) accountBtn.addEventListener('click', () => S.openAccount());
     if (themeBtn) themeBtn.addEventListener('click', () => S.toggleTheme());
