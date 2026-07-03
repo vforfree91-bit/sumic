@@ -522,14 +522,19 @@ body.light{--bg0:#f5f7fb;--bg1:#ffffff;--bg2:#f1f4f8;--bg3:#e8edf4;--bg4:#dbe3ee
   transition: opacity 180ms ease, visibility 180ms ease, width 180ms ease;
 }
 
-/* Show text elements in expanded state on hover */
+/* Show text elements in expanded state on hover or when open (mobile sidebar drawer) */
 .topbar:hover .brand-name,
+.topbar.open .brand-name,
 .topbar:hover .brand-sub,
+.topbar.open .brand-sub,
 .topbar:hover .tab-btn span,
-.topbar:hover .q-badge {
-  opacity: 1;
-  visibility: visible;
-  width: auto;
+.topbar.open .tab-btn span,
+.topbar:hover .q-badge,
+.topbar.open .q-badge {
+  opacity: 1 !important;
+  visibility: visible !important;
+  width: auto !important;
+  display: inline-block !important; /* Ensure override of display: none from mobile queries */
 }
 
 /* Adjust layout elements in collapsed state */
@@ -547,19 +552,22 @@ body.light{--bg0:#f5f7fb;--bg1:#ffffff;--bg2:#f1f4f8;--bg3:#e8edf4;--bg4:#dbe3ee
   font-size: 16px;
 }
 
-/* Adjust layout elements on hover expansion */
-.topbar:hover .topbar-brand {
-  justify-content: flex-start;
+/* Adjust layout elements on hover expansion or when open (mobile sidebar drawer) */
+.topbar:hover .topbar-brand,
+.topbar.open .topbar-brand {
+  justify-content: flex-start !important;
 }
-.topbar:hover .tab-btn {
-  justify-content: flex-start;
-  padding: 11px 13px;
-  gap: 11px;
+.topbar:hover .tab-btn,
+.topbar.open .tab-btn {
+  justify-content: flex-start !important;
+  padding: 11px 13px !important;
+  gap: 11px !important;
 }
-.topbar:hover .brand-logo {
-  width: 42px;
-  height: 42px;
-  font-size: 18px;
+.topbar:hover .brand-logo,
+.topbar.open .brand-logo {
+  width: 42px !important;
+  height: 42px !important;
+  font-size: 18px !important;
 }
 /* ── BRAND SECTION WITH GRADIENT TEXT (Req 13.5) ── */
 .topbar-brand {

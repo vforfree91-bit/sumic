@@ -84,20 +84,13 @@ void main(){
   function initMetaBallsLogo(container, opts) {
     const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     if (isMobile) {
-      const gradId = 'logo-grad-' + Math.random().toString(36).substring(2, 9);
       container.innerHTML = `
-        <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; display: block;">
-          <defs>
-            <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="var(--primary, #1db954)"/>
-              <stop offset="100%" stop-color="var(--primary-dark, #1ed760)"/>
-            </linearGradient>
-          </defs>
-          <rect x="20" y="35" width="8" height="30" rx="4" fill="url(#${gradId})"/>
-          <rect x="35" y="20" width="8" height="60" rx="4" fill="url(#${gradId})"/>
-          <rect x="50" y="10" width="8" height="80" rx="4" fill="url(#${gradId})"/>
-          <rect x="65" y="25" width="8" height="50" rx="4" fill="url(#${gradId})"/>
-          <rect x="80" y="40" width="8" height="20" rx="4" fill="url(#${gradId})"/>
+        <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; display: block; fill: var(--primary, #1db954);">
+          <rect x="20" y="35" width="8" height="30" rx="4" />
+          <rect x="35" y="20" width="8" height="60" rx="4" />
+          <rect x="50" y="10" width="8" height="80" rx="4" />
+          <rect x="65" y="25" width="8" height="50" rx="4" />
+          <rect x="80" y="40" width="8" height="20" rx="4" />
         </svg>
       `;
       return function destroy() {};
