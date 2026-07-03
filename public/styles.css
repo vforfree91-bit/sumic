@@ -414,7 +414,7 @@ body.light{--bg0:#f5f7fb;--bg1:#ffffff;--bg2:#f1f4f8;--bg3:#e8edf4;--bg4:#dbe3ee
 ::-webkit-scrollbar-thumb:hover{background:var(--primary)}
 
 /* YT hidden player */
-#ytWrap{position:fixed;bottom:-2px;right:-2px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1}
+#ytWrap{position:fixed;bottom:-20px;right:-20px;width:10px;height:10px;opacity:0.002;pointer-events:none;z-index:-1;overflow:hidden}
 
 /* ── BG ANIMATION ── */
 .bg-animation{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:linear-gradient(135deg,#0a0a0a,#1a1a2e)}

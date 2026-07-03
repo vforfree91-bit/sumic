@@ -8,14 +8,21 @@
 
   // Spoof Page Visibility API to allow background playback on mobile devices
   try {
-    Object.defineProperty(document, 'visibilityState', {
-      get: () => 'visible',
-      configurable: true
-    });
-    Object.defineProperty(document, 'hidden', {
-      get: () => false,
-      configurable: true
-    });
+    const spoofProto = (proto) => {
+      try {
+        Object.defineProperty(proto, 'visibilityState', {
+          get: () => 'visible',
+          configurable: true
+        });
+        Object.defineProperty(proto, 'hidden', {
+          get: () => false,
+          configurable: true
+        });
+      } catch (e) {}
+    };
+    spoofProto(document);
+    spoofProto(Document.prototype);
+
     const preventVisibility = (e) => {
       e.stopImmediatePropagation();
       e.preventDefault();
@@ -250,6 +257,30 @@
     }
   }
 
+  let silentAudio = null;
+  function playSilentAudio() {
+    try {
+      if (!silentAudio) {
+        silentAudio = document.createElement('audio');
+        silentAudio.id = 'silentAudio';
+        silentAudio.loop = true;
+        silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        document.body.appendChild(silentAudio);
+      }
+      silentAudio.play().catch(e => console.warn('Silent audio play failed:', e));
+    } catch (e) {
+      console.warn('Silent audio helper failed:', e);
+    }
+  }
+
+  function pauseSilentAudio() {
+    if (silentAudio) {
+      try {
+        silentAudio.pause();
+      } catch (e) {}
+    }
+  }
+
   function loadYT() {
     if (window.YT && window.YT.Player) {
       if (!yt) initYT();
@@ -328,6 +359,7 @@
       tickStart();
       spin(true);
       userInitiatedPause = false;
+      playSilentAudio();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     }
     if (e.data === P.PAUSED)   {
@@ -348,6 +380,8 @@
             }
           }
         }, 150);
+      } else {
+        pauseSilentAudio();
       }
     }
     if (e.data === P.ENDED)    { onEnd(); }
@@ -578,6 +612,7 @@
     loadLyrics(st.track);
     fetchRecommendations(st.track);
     updateMediaSession(st.track);
+    playSilentAudio();
     try {
       yt.loadVideoById({ videoId: st.track.id, startSeconds: 0, suggestedQuality: 'small' });
       yt.setVolume(st.vol * 100);
@@ -1314,6 +1349,16 @@
         }
       }
 
+      if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && dur > 0) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: Math.max(dur, cur),
+            playbackRate: 1,
+            position: cur
+          });
+        } catch (e) {}
+      }
+
       const pct = dur ? (cur / dur) * 100 : 0;
       const nf = document.getElementById('npFill'), ff = document.getElementById('fpFill');
       syncLyrics(cur);
@@ -1977,6 +2022,18 @@
       return;
     }
 
+    // Unlock Web Audio / Background Audio on first touch/click
+    const unlockAudio = () => {
+      playSilentAudio();
+      if (!st.playing) {
+        pauseSilentAudio();
+      }
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+
     // Set up Media Session actions
     if ('mediaSession' in navigator) {
       try {
@@ -1985,8 +2042,24 @@
         navigator.mediaSession.setActionHandler('previoustrack', () => S.prev());
         navigator.mediaSession.setActionHandler('nexttrack', () => S.next());
         navigator.mediaSession.setActionHandler('seekto', (details) => {
-          if (yt && ytOk && details.seekTime) {
+          if (yt && ytOk && typeof details.seekTime === 'number') {
             yt.seekTo(details.seekTime, true);
+          }
+        });
+        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+          if (yt && ytOk) {
+            const offset = details.seekOffset || 10;
+            try {
+              yt.seekTo(Math.max(0, yt.getCurrentTime() - offset), true);
+            } catch (e) {}
+          }
+        });
+        navigator.mediaSession.setActionHandler('seekforward', (details) => {
+          if (yt && ytOk) {
+            const offset = details.seekOffset || 10;
+            try {
+              yt.seekTo(Math.min(yt.getDuration(), yt.getCurrentTime() + offset), true);
+            } catch (e) {}
           }
         });
       } catch (e) {
