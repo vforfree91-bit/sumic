@@ -83,17 +83,16 @@ void main(){
   /* ── init ── */
   function initMetaBallsLogo(container, opts) {
     const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  
+    // Mobile-optimized defaults: fewer balls, smaller animation, lower resolution
     if (isMobile) {
-      container.innerHTML = `
-        <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; display: block; fill: var(--primary, #1db954);">
-          <rect x="20" y="35" width="8" height="30" rx="4" />
-          <rect x="35" y="20" width="8" height="60" rx="4" />
-          <rect x="50" y="10" width="8" height="80" rx="4" />
-          <rect x="65" y="25" width="8" height="50" rx="4" />
-          <rect x="80" y="40" width="8" height="20" rx="4" />
-        </svg>
-      `;
-      return function destroy() {};
+      opts = Object.assign(opts || {}, {
+        ballCount: 5,
+        animationSize: 14,
+        enableMouseInteraction: false,
+        hoverSmoothness: 0.08,
+        speed: 0.2
+      });
     }
 
     opts = Object.assign({
@@ -194,8 +193,9 @@ void main(){
     function resize() {
       const w = container.clientWidth;
       const h = container.clientHeight;
-      canvas.width = w * (window.devicePixelRatio || 1);
-      canvas.height = h * (window.devicePixelRatio || 1);
+      const dpr = isMobile ? Math.min(window.devicePixelRatio || 1, 1) : (window.devicePixelRatio || 1);
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform3f(loc.iResolution, canvas.width, canvas.height, 0);
     }

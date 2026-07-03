@@ -3,6 +3,18 @@
 /* Force GPU acceleration on container */
 .dock-shell{position:fixed;left:50%;bottom:calc(var(--npH) + 16px);transform:translateX(-50%);width:min(100%,980px);display:flex;justify-content:center;pointer-events:none;z-index:30;padding:0 14px;will-change:transform;transform:translate3d(-50%,0,0)}
 
+/* Mobile dock positioning – sits below the mini npbar */
+@media (max-width: 768px) {
+  .dock-shell { bottom: 12px; }
+}
+
+/* Very small screens – reduce dock item size */
+@media (max-width: 360px) {
+  .dock-item { width: 44px; height: 44px; border-radius: 12px; }
+  .dock-panel { gap: 0.5rem; padding: 0.5rem 0.6rem 0.6rem; border-radius: 16px; }
+  .dock-icon { font-size: 0.95rem; }
+}
+
 .dock-outer{pointer-events:auto;display:flex;max-width:100%;align-items:center;justify-content:center;will-change:height;backface-visibility:hidden;perspective:1000px;contain:layout style paint}
 
 .dock-panel{position:relative;display:flex;align-items:flex-end;width:fit-content;gap:1rem;border-radius:22px;background:linear-gradient(180deg,rgba(18,18,18,.95),rgba(12,12,12,.92));border:1px solid rgba(29,185,84,.14);padding:0.8rem 1rem 1rem;backdrop-filter:blur(24px);box-shadow:0 18px 44px rgba(0,0,0,.34);transform:translate3d(0,0,0);will-change:transform;contain:layout style}

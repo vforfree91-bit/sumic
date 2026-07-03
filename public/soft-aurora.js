@@ -8,9 +8,16 @@ export function initSoftAurora(containerOrId, options = {}) {
   if (!container) return;
 
   const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  
+  // Mobile-optimized: lower FPS cap, reduced complexity
   if (isMobile) {
-    container.style.background = 'radial-gradient(circle at 10% 20%, rgba(29, 185, 84, 0.15) 0%, transparent 45%), radial-gradient(circle at 90% 80%, rgba(225, 0, 255, 0.12) 0%, transparent 45%), #0c0c0e';
-    return function destroy() {};
+    options = Object.assign(options, {
+      speed: 0.3,
+      brightness: 0.7,
+      enableMouseInteraction: false,
+      noiseFrequency: 1.8,
+      noiseAmplitude: 0.7
+    });
   }
 
   const opts = Object.assign({
@@ -277,8 +284,9 @@ export function initSoftAurora(containerOrId, options = {}) {
   function resize() {
     const w = container.clientWidth;
     const h = container.clientHeight;
-    canvas.width = w * (window.devicePixelRatio || 1);
-    canvas.height = h * (window.devicePixelRatio || 1);
+    const dpr = isMobile ? Math.min(window.devicePixelRatio || 1, 1) : (window.devicePixelRatio || 1);
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniform3f(uniforms.uResolution, canvas.width, canvas.height, canvas.width / canvas.height);
   }
@@ -292,7 +300,7 @@ export function initSoftAurora(containerOrId, options = {}) {
   }
 
   let raf;
-  const maxFPS = 30;
+  const maxFPS = isMobile ? 20 : 30;
   const frameDuration = 1000 / maxFPS;
   let lastFrameTime = 0;
 
