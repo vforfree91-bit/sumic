@@ -5,43 +5,6 @@
  */
 (function () {
   'use strict';
-
-  // Spoof Page Visibility API to allow background playback on mobile devices
-  try {
-    const spoofProto = (proto) => {
-      try {
-        Object.defineProperty(proto, 'visibilityState', {
-          get: () => 'visible',
-          configurable: true
-        });
-        Object.defineProperty(proto, 'hidden', {
-          get: () => false,
-          configurable: true
-        });
-      } catch (e) {}
-    };
-    spoofProto(document);
-    spoofProto(Document.prototype);
-
-    const preventVisibility = (e) => {
-      e.stopImmediatePropagation();
-      e.preventDefault();
-    };
-    document.addEventListener('visibilitychange', preventVisibility, true);
-    document.addEventListener('webkitvisibilitychange', preventVisibility, true);
-    window.addEventListener('visibilitychange', preventVisibility, true);
-
-    const originalAddEventListener = EventTarget.prototype.addEventListener;
-    EventTarget.prototype.addEventListener = function(type, listener, options) {
-      if (type === 'visibilitychange' || type === 'webkitvisibilitychange') {
-        if (this === document || this === window) return;
-      }
-      return originalAddEventListener.apply(this, arguments);
-    };
-  } catch (e) {
-    console.warn('Visibility override failed:', e);
-  }
-
   // API BASE CONFIGURATION (Set this to your Render backend URL when deploying to Cloudflare Pages)
   const API_BASE = 'https://sumic-api.onrender.com';
 
@@ -257,29 +220,7 @@
     }
   }
 
-  let silentAudio = null;
-  function playSilentAudio() {
-    try {
-      if (!silentAudio) {
-        silentAudio = document.createElement('audio');
-        silentAudio.id = 'silentAudio';
-        silentAudio.loop = true;
-        silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-        document.body.appendChild(silentAudio);
-      }
-      silentAudio.play().catch(e => console.warn('Silent audio play failed:', e));
-    } catch (e) {
-      console.warn('Silent audio helper failed:', e);
-    }
-  }
-
-  function pauseSilentAudio() {
-    if (silentAudio) {
-      try {
-        silentAudio.pause();
-      } catch (e) {}
-    }
-  }
+  let wasPlayingBeforeMinimize = false;
 
   function loadYT() {
     if (window.YT && window.YT.Player) {
@@ -359,7 +300,7 @@
       tickStart();
       spin(true);
       userInitiatedPause = false;
-      playSilentAudio();
+      wasPlayingBeforeMinimize = false;
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     }
     if (e.data === P.PAUSED)   {
@@ -371,17 +312,19 @@
       
       // Auto-resume if the pause was not initiated by the user (e.g., app minimized or tab hidden)
       if (!userInitiatedPause) {
-        setTimeout(() => {
-          if (yt && ytOk && !userInitiatedPause) {
-            try {
-              yt.playVideo();
-            } catch (err) {
-              console.warn('Auto-resume failed:', err);
+        if (!document.hidden) {
+          setTimeout(() => {
+            if (yt && ytOk && !userInitiatedPause && !document.hidden) {
+              try {
+                yt.playVideo();
+              } catch (err) {
+                console.warn('Auto-resume failed:', err);
+              }
             }
-          }
-        }, 150);
-      } else {
-        pauseSilentAudio();
+          }, 150);
+        } else {
+          wasPlayingBeforeMinimize = true;
+        }
       }
     }
     if (e.data === P.ENDED)    { onEnd(); }
@@ -612,7 +555,6 @@
     loadLyrics(st.track);
     fetchRecommendations(st.track);
     updateMediaSession(st.track);
-    playSilentAudio();
     try {
       yt.loadVideoById({ videoId: st.track.id, startSeconds: 0, suggestedQuality: 'small' });
       yt.setVolume(st.vol * 100);
@@ -2022,17 +1964,21 @@
       return;
     }
 
-    // Unlock Web Audio / Background Audio on first touch/click
-    const unlockAudio = () => {
-      playSilentAudio();
-      if (!st.playing) {
-        pauseSilentAudio();
+    // Auto-resume playback when app returns to foreground
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && wasPlayingBeforeMinimize) {
+        wasPlayingBeforeMinimize = false;
+        setTimeout(() => {
+          if (yt && ytOk && !st.playing) {
+            try {
+              yt.playVideo();
+            } catch (err) {
+              console.warn('Auto-resume on visibilitychange failed:', err);
+            }
+          }
+        }, 100);
       }
-      document.removeEventListener('click', unlockAudio);
-      document.removeEventListener('touchstart', unlockAudio);
-    };
-    document.addEventListener('click', unlockAudio);
-    document.addEventListener('touchstart', unlockAudio);
+    });
 
     // Set up Media Session actions
     if ('mediaSession' in navigator) {
