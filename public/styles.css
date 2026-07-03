@@ -3055,6 +3055,9 @@ input:focus-visible {
 }
 
 /* ── Mobile Sidebar Drawer ── */
+.sidebar-backdrop {
+  display: none;
+}
 .mobile-menu-btn {
   display: none !important;
   font-size: 1.15rem !important;
@@ -3097,6 +3100,7 @@ input:focus-visible {
 
   /* Backdrop element */
   .sidebar-backdrop {
+    display: block;
     position: fixed;
     top: 0;
     left: 0;
