@@ -2,6 +2,11 @@ export function initVariableProximity(elementOrId, options = {}) {
   const element = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
   if (!element) return;
 
+  const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  if (isMobile) {
+    return function destroy() {};
+  }
+
   const label = options.label || element.textContent || '';
   const fromFontVariationSettings = options.fromFontVariationSettings || "'wght' 400, 'opsz' 8";
   const toFontVariationSettings = options.toFontVariationSettings || "'wght' 1000, 'opsz' 40";

@@ -7,6 +7,12 @@ export function initSoftAurora(containerOrId, options = {}) {
   const container = typeof containerOrId === 'string' ? document.getElementById(containerOrId) : containerOrId;
   if (!container) return;
 
+  const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  if (isMobile) {
+    container.style.background = 'radial-gradient(circle at 10% 20%, rgba(29, 185, 84, 0.15) 0%, transparent 45%), radial-gradient(circle at 90% 80%, rgba(225, 0, 255, 0.12) 0%, transparent 45%), #0c0c0e';
+    return function destroy() {};
+  }
+
   const opts = Object.assign({
     speed: 0.6,
     scale: 1.5,

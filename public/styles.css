@@ -445,10 +445,19 @@ body.light{--bg0:#f5f7fb;--bg1:#ffffff;--bg2:#f1f4f8;--bg3:#e8edf4;--bg4:#dbe3ee
 .bg-orb:nth-child(3){width:350px;height:350px;background:radial-gradient(circle,var(--primary-dark),transparent 70%);top:45%;left:55%;opacity:.04;animation:orb 26s ease-in-out infinite -16s}
 @keyframes orb{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(60px,-50px) scale(1.08)}50%{transform:translate(-40px,60px) scale(.95)}75%{transform:translate(45px,30px) scale(1.05)}}
 
+@media (max-width: 768px) {
+  .bg-orb { display: none !important; animation: none !important; }
+}
+
 /* particles */
 .particles{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .pt{position:absolute;border-radius:50%;background:var(--primary);opacity:0;animation:ptf linear infinite}
 @keyframes ptf{0%{opacity:0;transform:translateY(100vh) scale(0)}8%{opacity:.25}92%{opacity:.25}100%{opacity:0;transform:translateY(-10vh) scale(1)}}
+
+@media (max-width: 768px) {
+  .particles { display: none !important; }
+  .pt { animation: none !important; }
+}
 
 /* toasts */
 .toasts{position:fixed;top:14px;right:14px;z-index:400;display:flex;flex-direction:column;gap:7px;max-width:320px}

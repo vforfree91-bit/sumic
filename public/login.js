@@ -32,26 +32,30 @@ import { initScrambledText } from './scrambled-text.js';
   }
 
 
-  // Initialize TrueFocus component (music, sumic.)
-  initTrueFocus('trueFocusContainer', {
-    sentence: 'music, sumic.',
-    separator: ' ',
-    manualMode: false,
-    blurAmount: 5,
-    borderColor: '#1db954',
-    glowColor: 'rgba(29, 185, 84, 0.6)',
-    animationDuration: 0.5,
-    pauseBetweenAnimations: 1.0
-  });
+  const isMobileLogin = window.innerWidth <= 1023 || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
-  // Initialize ScrambledText component with custom paragraph for sumic streaming app
-  initScrambledText('scrambledTextContainer', {
-    radius: 100,
-    duration: 1.2,
-    speed: 0.5,
-    scrambleChars: '.:',
-    text: 'Sumic redefines how you listen. A distraction-free music streaming experience designed for audiophiles, dreamers, and curators. Built for absolute robustness, seamless stability, and reliable performance.'
-  });
+  if (!isMobileLogin) {
+    // Initialize TrueFocus component (music, sumic.)
+    initTrueFocus('trueFocusContainer', {
+      sentence: 'music, sumic.',
+      separator: ' ',
+      manualMode: false,
+      blurAmount: 5,
+      borderColor: '#1db954',
+      glowColor: 'rgba(29, 185, 84, 0.6)',
+      animationDuration: 0.5,
+      pauseBetweenAnimations: 1.0
+    });
+
+    // Initialize ScrambledText component with custom paragraph for sumic streaming app
+    initScrambledText('scrambledTextContainer', {
+      radius: 100,
+      duration: 1.2,
+      speed: 0.5,
+      scrambleChars: '.:',
+      text: 'Sumic redefines how you listen. A distraction-free music streaming experience designed for audiophiles, dreamers, and curators. Built for absolute robustness, seamless stability, and reliable performance.'
+    });
+  }
 
   // Initialize VariableProximity on the login page branding
   const brandTitle = document.querySelector('.auth-brand .brand-title');

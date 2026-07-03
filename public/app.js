@@ -1776,6 +1776,8 @@
   }
 
   function particles() {
+    const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isMobile) return;
     const c = document.getElementById('particles'); if (!c) return;
     for (let i = 0; i < 18; i++) {
       const p = document.createElement('div'); p.className = 'pt';
