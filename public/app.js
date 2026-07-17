@@ -6,7 +6,9 @@
 (function () {
   'use strict';
   // API BASE CONFIGURATION (Set this to your Render backend URL when deploying to Cloudflare Pages)
-  const API_BASE = 'https://sumic-api.onrender.com';
+  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? (window.location.port === '3000' ? '' : 'http://localhost:3000')
+    : 'https://sumic-api.onrender.com';
 
 
   // Default playlists
