@@ -64,6 +64,9 @@
     track: JSON.parse(localStorage.getItem('sumic_track') || 'null'),
     queue: JSON.parse(localStorage.getItem('sumic_queue') || '[]'),
     hist: JSON.parse(localStorage.getItem('sumic_history') || '[]'),
+    autoplay: localStorage.getItem('sumic_autoplay') !== 'false',
+    playedIds: new Set(),
+    playedTitles: new Set(),
     playing: false, shuffle: false, repeatMode: 'off',
     vol: parseFloat(localStorage.getItem('sumic_vol') || '0.8'),
     muted: false,
@@ -77,7 +80,7 @@
     activeImportedPlaylistId: null,
     liked: JSON.parse(localStorage.getItem('sumic_liked') || '[]'),
     user: null,
-    theme: localStorage.getItem('sumic_theme') || 'dark',
+    // theme: localStorage.getItem('sumic_theme') || 'dark',
     lyrics: [],
     lyricsIndex: -1,
     recommendations: JSON.parse(localStorage.getItem('sumic_recommendations') || '[]'),
@@ -382,15 +385,23 @@
     localStorage.setItem('sumic_queue', JSON.stringify(st.queue));
   }
 
-  function normalizeTrack(track) {
-    if (!track) return null;
+  function normalizeTrack(t) {
+    if (!t) return null;
     return {
-      id: track.id || track.videoId || '',
-      title: track.title || 'Unknown',
-      author: track.author || track.artist || '',
-      thumbnail: track.thumbnail || '',
-      duration: track.duration || null
+      id: t.id || t.videoId || '',
+      title: t.title || 'Unknown',
+      author: t.author || t.artist || '',
+      thumbnail: t.thumbnail || '',
+      duration: t.duration || null
     };
+  }
+
+  function normalizeTitleForDedupe(title) {
+    if (!title) return '';
+    return title.toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .replace(/\s+(official|video|audio|lyric|lyrics|music|mv)\s*/g, ' ')
+      .trim();
   }
 
   function isLiked(id) {
@@ -401,13 +412,13 @@
     return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   }
 
-  function applyTheme() {
-    document.body.classList.toggle('light', st.theme === 'light');
-    const btn = document.getElementById('themeToggle');
-    if (btn) btn.innerHTML = `<i class="fas fa-${st.theme === 'light' ? 'sun' : 'moon'}"></i>`;
-    const sideBtn = document.getElementById('sidebarThemeToggle');
-    if (sideBtn) sideBtn.innerHTML = `<i class="fas fa-${st.theme === 'light' ? 'sun' : 'moon'}"></i><span>Theme Toggle</span>`;
-  }
+  // function applyTheme() {
+  //   document.body.classList.toggle('light', st.theme === 'light');
+  //   const btn = document.getElementById('themeToggle');
+  //   if (btn) btn.innerHTML = `<i class="fas fa-${st.theme === 'light' ? 'sun' : 'moon'}"></i>`;
+  //   const sideBtn = document.getElementById('sidebarThemeToggle');
+  //   if (sideBtn) sideBtn.innerHTML = `<i class="fas fa-${st.theme === 'light' ? 'sun' : 'moon'}"></i><span>Theme Toggle</span>`;
+  // }
 
   function scrollActiveLyricToCenter() {
     const wrap = document.getElementById('lyricsLines');
@@ -515,7 +526,7 @@
           <div class="drawer-thumb">${item.thumbnail ? `<img src="${item.thumbnail}" alt="" loading="lazy">` : '<i class="fas fa-music"></i>'}</div>
           <div class="drawer-info">
             <div class="drawer-title">${esc(item.title)}</div>
-            <div class="drawer-meta">${esc(item.author || 'Queued track')}</div>
+            <div class="drawer-meta">${esc(item.author || 'Queued track')}${item.isAutoplay ? ' <span class="q-badge-autoplay">Autoplay</span>' : ''}</div>
           </div>
         </div>`;
     }).join('');
@@ -577,6 +588,10 @@
       persistHistory();
     }
     st.track = normalizeTrack(track);
+    if (st.track) {
+      st.playedIds.add(st.track.id);
+      st.playedTitles.add(normalizeTitleForDedupe(st.track.title));
+    }
     st.queue = [...queue];
     persistTrackAndQueue();
     localStorage.setItem('sumic_time', '0');
@@ -634,6 +649,76 @@
     }
   }
 
+  async function triggerAutoplay() {
+    if (!st.autoplay) return;
+    
+    toast('Autoplaying similar track...', 'info');
+    
+    let pool = st.recommendations.filter(t => 
+      !st.playedIds.has(t.id) && 
+      !st.playedTitles.has(normalizeTitleForDedupe(t.title))
+    );
+    
+    const currentAuthor = st.track ? st.track.author : '';
+
+    if (pool.length < 3 && st.track) {
+      const anchor = `${st.track.title} ${currentAuthor} mix`.trim();
+      try {
+        const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(anchor)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.results)) {
+            const newTracks = data.results.filter(t => 
+              t.id !== st.track.id &&
+              !st.playedIds.has(t.id) && 
+              !st.playedTitles.has(normalizeTitleForDedupe(t.title))
+            );
+            pool = [...pool, ...newTracks];
+          }
+        }
+      } catch (e) {
+        console.warn('Autoplay fetch failed:', e);
+      }
+    }
+    
+    if (pool.length > 0) {
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+
+      let nextTrackIndex = pool.findIndex(t => t.author !== currentAuthor);
+      if (nextTrackIndex === -1) nextTrackIndex = 0;
+      
+      const nextTrack = pool.splice(nextTrackIndex, 1)[0];
+      nextTrack.isAutoplay = true;
+      nextTrack.author = nextTrack.author || nextTrack.uploaderName || 'Autoplay';
+      nextTrack.thumbnail = nextTrack.thumbnail || `https://img.youtube.com/vi/${nextTrack.id}/mqdefault.jpg`;
+      
+      let sameArtistCount = 0;
+      const autoQueue = [];
+      for (let t of pool) {
+        if (t.author === currentAuthor) {
+          sameArtistCount++;
+          if (sameArtistCount > 1) continue; 
+        }
+        autoQueue.push({
+          id: t.id,
+          title: t.title,
+          author: t.author || t.uploaderName || 'Autoplay',
+          thumbnail: t.thumbnail || `https://img.youtube.com/vi/${t.id}/mqdefault.jpg`,
+          isAutoplay: true
+        });
+        if (autoQueue.length === 5) break;
+      }
+      
+      play(nextTrack, autoQueue);
+    } else {
+      toast('No similar tracks found for autoplay.', 'info');
+      setIcons(false);
+    }
+  }
+
   function onEnd(force = false) {
     st.playing = false; tickStop(); spin(false);
     localStorage.setItem('sumic_time', '0');
@@ -644,12 +729,20 @@
       const t = q.splice(i, 1)[0];
       play(t, q); return;
     }
-    if (q.length > 0) { const t = q.shift(); play(t, q); return; }
+    if (q.length > 0) {
+      const t = q.shift();
+      play(t, q);
+      return;
+    }
     if (st.repeatMode === 'all' && st.hist.length > 0) {
       const all = [...st.hist, ...(st.track ? [st.track] : [])];
       st.hist = [];
       const first = all.shift();
       play(first, all); return;
+    }
+    if (st.autoplay) {
+      triggerAutoplay();
+      return;
     }
     setIcons(false);
   }
@@ -738,7 +831,7 @@
         renderImportedPlaylist();
         S.renderPlaylists();
         S.tab('imported');
-        toast(`Imported "${data.playlist.title}" — ${data.playlist.tracks.length} tracks`, 'ok');
+        // toast(`Imported "${data.playlist.title}" — ${data.playlist.tracks.length} tracks`, 'ok');
         announce(`Imported ${data.playlist.title}`);
       } catch (e) {
         toast(e.message || 'Import failed', 'err');
@@ -828,12 +921,12 @@
       S.closePlaylistDrawer();
     },
 
-    toggleTheme() {
-      st.theme = st.theme === 'light' ? 'dark' : 'light';
-      localStorage.setItem('sumic_theme', st.theme);
-      applyTheme();
-      toast(`Switched to ${st.theme} mode`, 'ok');
-    },
+    // toggleTheme() {
+    //   st.theme = st.theme === 'light' ? 'dark' : 'light';
+    //   localStorage.setItem('sumic_theme', st.theme);
+    //   applyTheme();
+    //   // toast(`Switched to ${st.theme} mode`, 'ok');
+    // },
 
     playLiked(index) {
       const track = st.liked[index];
@@ -886,14 +979,20 @@
         const r = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(q)}`);
         const d = await r.json();
         loading(false);
-        if (d.error || !d.results?.length) { renderResults([], q); toast(d.error || `No results for "${q}"`, 'err'); announce(`No results for ${q}`); return; }
+        if (d.error || !d.results?.length) { 
+          renderResults([], q); 
+          toast(d.error || `No results for "${q}"`, 'err'); 
+          announce(`No results for ${q}`); 
+          return; 
+        }
         st.results = d.results;
         renderResults(d.results, q);
-        const first = d.results[0], rest = d.results.slice(1);
-        play({ id: first.id, title: first.title, author: first.author, thumbnail: first.thumbnail },
-             rest.map(x => ({ id: x.id, title: x.title, author: x.author, thumbnail: x.thumbnail })));
-        announce(`Playing ${first.title}`);
-      } catch(e) { loading(false); toast('Search failed: ' + e.message, 'err'); announce('Search failed'); }
+        announce(`Showing results for ${q}`);
+      } catch(e) { 
+        loading(false); 
+        toast('Search failed: ' + e.message, 'err'); 
+        announce('Search failed'); 
+      }
     },
 
     quick(q) { document.getElementById('heroQ').value = q; S.search(q); },
@@ -915,9 +1014,7 @@
     playAt(i) {
       if (!st.results[i]) return;
       const t = st.results[i];
-      const rest = [...st.results.slice(i+1), ...st.results.slice(0,i)];
-      play({ id:t.id, title:t.title, author:t.author, thumbnail:t.thumbnail },
-           rest.map(x => ({ id:x.id, title:x.title, author:x.author, thumbnail:x.thumbnail })));
+      play({ id:t.id, title:t.title, author:t.author, thumbnail:t.thumbnail }, []);
     },
 
     pp() {
@@ -1065,6 +1162,14 @@
         songBtn?.classList.add('active');
         lyricBtn?.classList.remove('active');
       }
+    },
+
+    toggleAutoplay() {
+      st.autoplay = !st.autoplay;
+      localStorage.setItem('sumic_autoplay', st.autoplay);
+      const btn = document.getElementById('autoplayToggleBtn');
+      if (btn) btn.classList.toggle('active', st.autoplay);
+      toast(`Autoplay ${st.autoplay ? 'enabled' : 'disabled'}`, 'ok');
     },
 
     clearQueue() {
@@ -1484,7 +1589,7 @@
       el.innerHTML = st.queue.map((t, i) => `
         <div class="q-item" onclick="S.playFromQueue(${i})">
           <div class="q-thumb">${t.thumbnail ? `<img src="${t.thumbnail}" alt="" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-music\\'></i>'">` : '<i class="fas fa-music"></i>'}</div>
-          <div class="q-info"><div class="q-title">${esc(t.title)}</div><div class="q-by">${esc(t.author||'--')}</div></div>
+          <div class="q-info"><div class="q-title">${esc(t.title)}</div><div class="q-by">${esc(t.author||'--')}${t.isAutoplay ? ' <span class="q-badge-autoplay">Autoplay</span>' : ''}</div></div>
           <button class="q-rm" onclick="event.stopPropagation();S.rmQueue(${i})"><i class="fas fa-times"></i></button>
         </div>`).join('');
     }
@@ -1989,7 +2094,7 @@
     const loginForm = document.getElementById('loginForm');
     const guestBtn = document.getElementById('guestBtn');
     const accountBtn = document.getElementById('accountBtn');
-    const themeBtn = document.getElementById('themeToggle');
+    // const themeBtn = document.getElementById('themeToggle');
     const drawerBtn = document.getElementById('playlistDrawerBtn');
     const closeDrawerBtn = document.getElementById('closeDrawerBtn');
     const authShell = document.getElementById('authShell');
@@ -2068,7 +2173,7 @@
       }
     }
     if (accountBtn) accountBtn.addEventListener('click', () => S.openAccount());
-    if (themeBtn) themeBtn.addEventListener('click', () => S.toggleTheme());
+    // if (themeBtn) themeBtn.addEventListener('click', () => S.toggleTheme());
     if (drawerBtn) drawerBtn.addEventListener('click', () => S.togglePlaylistDrawer());
     if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', () => S.closePlaylistDrawer());
 
@@ -2143,8 +2248,10 @@
     }
     
     updateAccountUI();
-    applyTheme();
+    // applyTheme();
     renderPlaylistDrawer();
+    const autoBtn = document.getElementById('autoplayToggleBtn');
+    if (autoBtn) autoBtn.classList.toggle('active', st.autoplay);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

@@ -42,9 +42,7 @@
       
       <div class="sidebar-footer">
         <div class="sidebar-divider"></div>
-        <button class="tab-btn" id="sidebarThemeToggle" aria-label="Toggle theme" onclick="S.toggleTheme()">
-          <i class="fas fa-moon"></i><span>Theme Toggle</span>
-        </button>
+
         <button class="tab-btn account" id="sidebarAccountBtn" aria-label="Open account menu" onclick="S.openAccount()">
           <span class="avatar" id="sidebarAvatarBadge">U</span>
           <span id="sidebarAccountLabel">Account</span>
@@ -59,7 +57,7 @@
         <div class="shell-title">Discover your sound</div>
         
         <div class="shell-actions">
-          <button class="ghost-btn" id="themeToggle" type="button" aria-label="Toggle theme"><i class="fas fa-moon"></i></button>
+
           <button class="ghost-btn" id="playlistDrawerBtn" type="button" aria-label="Open playlist drawer"><i class="fas fa-bars-staggered"></i></button>
           <button class="ghost-btn account" id="accountBtn" aria-label="Open account menu">
             <span class="avatar" id="avatarBadge">U</span>
@@ -239,7 +237,6 @@
         <div id="importStatus" class="import-status" role="status" aria-live="polite"></div>
         <div id="importResults" class="import-results"></div>
       </section>
-
     </main>
 
     <div id="dockMount" class="dock-shell"></div>
@@ -248,7 +245,12 @@
       <div class="playlist-drawer-header">
         <div>
           <p class="sec-label">Your queue</p>
-          <h3>Now playing list</h3>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h3 style="margin: 0;">Now playing list</h3>
+            <button class="autoplay-toggle" id="autoplayToggleBtn" onclick="S.toggleAutoplay()" aria-label="Toggle Autoplay" title="Autoplay similar songs when queue ends">
+              <i class="fas fa-infinity"></i> Autoplay
+            </button>
+          </div>
         </div>
         <button class="ghost-btn" id="closeDrawerBtn" type="button" aria-label="Close playlist drawer"><i class="fas fa-xmark"></i></button>
       </div>
